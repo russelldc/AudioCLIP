@@ -12,6 +12,7 @@ from typing import Tuple
 from typing import Union
 from typing import Optional
 
+import numpy as np
 
 ClipFeatures = Tuple[
     Optional[torch.Tensor],  # audio
@@ -119,6 +120,18 @@ class AudioCLIP(CLIP):
 
     def encode_audio(self, audio: torch.Tensor) -> torch.Tensor:
         return self.audio(audio.to(self.device))
+    
+    def create_audio_encoding(self, audio):
+        if isinstance(audio, str):
+            import librosa
+            wav, sample_rate = librosa.load(audio, sr=22050, mono=True)
+            if wav.ndim == 1:
+                wav = wav[:, np.newaxis]
+        wav = wav.T * 32768.0
+        wav = torch.from_numpy(wav).float().to(self.device)
+        with torch.no_grad():
+            audio_encoding = self.encode_audio(wav).detach()
+        return audio_encoding
 
     def encode_text(self,
                     text: List[List[str]],
